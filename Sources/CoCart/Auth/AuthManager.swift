@@ -69,7 +69,7 @@ final class AuthManager {
         guard mode == .guest else { return }
         let key = body["cart_key"] as? String
             ?? headers["cart-key"]
-            ?? headers["x-cocart-api"]
+            ?? headers["cocart-api-cart-key"]
         guard let key, key != cartKey else { return }
         cartKey = key
         Task { try? await storage.write(options.storageKey, value: key) }

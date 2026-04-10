@@ -71,6 +71,12 @@ final class AuthManagerTests: XCTestCase {
         XCTAssertEqual(auth.cartKey, "header_key")
     }
 
+    func testCaptureCartKeyFromFallbackHeader() {
+        let auth = AuthManager(options: CoCartOptions(), storage: MemoryStorage())
+        auth.captureCartKey(from: [:], headers: ["cocart-api-cart-key": "fallback_key"])
+        XCTAssertEqual(auth.cartKey, "fallback_key")
+    }
+
     func testCaptureCartKeyIgnoredWhenAuthenticated() {
         let opts = CoCartOptions(username: "admin", password: "pass")
         let auth = AuthManager(options: opts, storage: MemoryStorage())

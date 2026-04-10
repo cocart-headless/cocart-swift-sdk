@@ -88,6 +88,12 @@ final class HTTPClient {
             request.setValue(authValue, forHTTPHeaderField: options.authHeaderName)
         }
 
+        // Cart key headers for guest sessions
+        if let cartKey = auth.guestCartKey {
+            request.setValue(cartKey, forHTTPHeaderField: "Cart-Key")
+            request.setValue(cartKey, forHTTPHeaderField: "CoCart-API-Cart-Key")
+        }
+
         if options.etag, let etag = etagCache[path] {
             request.setValue(etag, forHTTPHeaderField: "If-None-Match")
         }
