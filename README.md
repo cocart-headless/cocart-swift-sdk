@@ -6,10 +6,10 @@
 [![Tests](https://img.shields.io/github/actions/workflow/status/cocart-headless/cocart-swift-sdk/tests.yml?label=tests&style=for-the-badge&labelColor=000000)](https://github.com/cocart-headless/cocart-swift-sdk/actions/workflows/tests.yml)
 [![License](https://img.shields.io/github/license/cocart-headless/cocart-swift-sdk?color=9cf&style=for-the-badge&labelColor=000000)](https://github.com/cocart-headless/cocart-swift-sdk/blob/main/LICENSE)
 
-Official Swift SDK for the [CoCart](https://cocartapi.com) REST API. Build **headless WooCommerce storefronts** for iOS, macOS, and watchOS — your app talks to WooCommerce through its API instead of rendering PHP templates.
+Official Swift SDK for the [CoCart](https://cocartapi.com) REST API — a native Swift client for managing WooCommerce carts, products, and customer sessions.
 
 > [!IMPORTANT]
-> This SDK is looking for feedback, if you experience a bug please report it.
+> This SDK is still in development and not yet ready for production use. Provide feedback if you experience a bug.
 
 ## TODO to complete the SDK
 
