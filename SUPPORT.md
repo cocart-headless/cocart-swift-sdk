@@ -44,13 +44,13 @@ Only the **latest major version** receives active development. Older major versi
 |---|---|---|
 | iOS | 17.0 | Supported, tested in CI |
 | macOS | 14.0 | Supported, tested in CI |
-| watchOS | 11.0 | Supported, build-tested in CI |
+| watchOS | 10.0 | Supported, build-tested in CI |
 
 ### Swift compatibility
 
 | Swift | Support |
 |---|---|
-| 5.9+ | Required; tested in CI |
+| 5.10+ | Required; tested in CI |
 | 6.0+ | Supported |
 
 ### Xcode compatibility
@@ -62,7 +62,7 @@ Only the **latest major version** receives active development. Older major versi
 
 ### Version support policy
 
-We support all Apple platform versions that are within the **current and previous major OS release** cycle. The SDK requires Swift 5.9+ for `async/await` and modern concurrency features.
+We support all Apple platform versions that are within the **current and previous major OS release** cycle. The SDK requires Swift 5.10+ for `async/await` and modern concurrency features.
 
 - **Adding new platforms:** When a new OS version ships (typically each September), we add CI testing and official support.
 - **Dropping old versions:** When a platform version is two major releases behind, we drop it in the next major SDK release.

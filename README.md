@@ -1,7 +1,7 @@
 # CoCart Swift SDK
 
-[![Swift](https://img.shields.io/badge/Swift-5.9+-orange?style=for-the-badge&labelColor=000000)](https://swift.org)
-[![Platforms](https://img.shields.io/badge/Platforms-iOS_17+_|_macOS_14+_|_watchOS_11+-blue?style=for-the-badge&labelColor=000000)](https://developer.apple.com)
+[![Swift](https://img.shields.io/badge/Swift-5.10+-orange?style=for-the-badge&labelColor=000000)](https://swift.org)
+[![Platforms](https://img.shields.io/badge/Platforms-iOS_17+_|_macOS_14+_|_watchOS_10+-blue?style=for-the-badge&labelColor=000000)](https://developer.apple.com)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen?style=for-the-badge&labelColor=000000)](https://github.com/cocart-headless/cocart-swift-sdk)
 [![Tests](https://img.shields.io/github/actions/workflow/status/cocart-headless/cocart-swift-sdk/tests.yml?label=tests&style=for-the-badge&labelColor=000000)](https://github.com/cocart-headless/cocart-swift-sdk/actions/workflows/tests.yml)
 [![License](https://img.shields.io/github/license/cocart-headless/cocart-swift-sdk?color=9cf&style=for-the-badge&labelColor=000000)](https://github.com/cocart-headless/cocart-swift-sdk/blob/main/LICENSE)
@@ -22,8 +22,8 @@ Official Swift SDK for the [CoCart](https://cocartapi.com) REST API. Build **hea
 
 ## Requirements
 
-- **Swift 5.9+** — Required for `async/await` and modern concurrency features. Xcode 15.4 or later includes this version.
-- **iOS 17+, macOS 14+, or watchOS 11+** — The minimum deployment targets for the SDK.
+- **Swift 5.10+** — Required for `async/await` and modern concurrency features. Xcode 15.4 or later includes this version.
+- **iOS 17+, macOS 14+, or watchOS 10+** — The minimum deployment targets for the SDK.
 - **CoCart plugin** installed on your WooCommerce store — This is the WordPress plugin that provides the REST API endpoints the SDK communicates with.
 - [CoCart JWT Authentication](https://wordpress.org/plugins/cocart-jwt-authentication/) plugin for JWT features (optional) — Only needed if you want to use JSON Web Token authentication (explained in the [Authentication](docs/authentication.md) guide).
 

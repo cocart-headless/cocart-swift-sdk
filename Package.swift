@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 5.10
 import PackageDescription
 
 let package = Package(
@@ -6,7 +6,7 @@ let package = Package(
     platforms: [
         .iOS(.v17),
         .macOS(.v14),
-        .watchOS(.v11),
+        .watchOS(.v10),
     ],
     products: [
         .library(name: "CoCart", targets: ["CoCart"]),
