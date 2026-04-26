@@ -163,6 +163,18 @@ final class HTTPClient {
         case 200, 201:
             return CoCartResponse(data: body, headers: headers, statusCode: statusCode)
         case 401:
+            if body["code"] as? String == "cocart_2fa_required" {
+                let data = body["data"] as? [String: Any] ?? body
+                let providers = data["available_providers"] as? [String] ?? []
+                let defaultProvider = data["default_provider"] as? String
+                let emailSent = data["email_sent"] as? Bool ?? false
+                throw CoCartError.twoFactorRequired(
+                    body["message"] as? String ?? "Two-factor authentication required",
+                    availableProviders: providers,
+                    defaultProvider: defaultProvider,
+                    emailSent: emailSent
+                )
+            }
             throw CoCartError.auth(body["message"] as? String ?? "Unauthorized",
                                    code: body["code"] as? String)
         case 403:

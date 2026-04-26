@@ -10,6 +10,10 @@ public final class JWTResource {
         self.auth = auth
     }
 
+    /// Log in with username and password to acquire JWT tokens.
+    ///
+    /// If the user has 2FA enabled, throws `CoCartError.twoFactorRequired`.
+    /// Catch that error, prompt for the verification code, then call `verifyTwoFactor()`.
     public func login(_ identifier: String, password: String) async throws -> CoCartResponse {
         let response = try await http.postRaw("cocart/jwt/token", body: [
             "username": identifier,
@@ -17,6 +21,35 @@ public final class JWTResource {
         ])
         guard let token = response.getString("token") else {
             throw CoCartError.auth("JWT login failed — no token returned", code: nil)
+        }
+        auth.setJWTToken(token)
+        if let refresh = response.getString("refresh_token") {
+            auth.setRefreshToken(refresh)
+        }
+        return response
+    }
+
+    /// Complete a Two Factor Authentication login challenge.
+    ///
+    /// Call this after catching `CoCartError.twoFactorRequired` from `login()`.
+    /// Submits the verification code (and optional provider) to acquire JWT tokens.
+    ///
+    /// - Parameters:
+    ///   - identifier: Username or email address.
+    ///   - password: Account password.
+    ///   - code: Verification code from the user's 2FA provider.
+    ///   - provider: Provider to use (e.g. `"totp"`, `"email"`, `"backup"`). Uses server default if nil.
+    public func verifyTwoFactor(_ identifier: String, password: String, code: String, provider: String? = nil) async throws -> CoCartResponse {
+        var body: [String: Any] = [
+            "username": identifier,
+            "password": password,
+            "2fa_code": code
+        ]
+        if let provider { body["2fa_provider"] = provider }
+
+        let response = try await http.postRaw("cocart/jwt/token", body: body)
+        guard let token = response.getString("token") else {
+            throw CoCartError.auth("JWT token not found in 2FA login response", code: nil)
         }
         auth.setJWTToken(token)
         if let refresh = response.getString("refresh_token") {
