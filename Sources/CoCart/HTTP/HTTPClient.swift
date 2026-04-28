@@ -199,6 +199,11 @@ final class HTTPClient {
         case 403:
             throw CoCartError.forbidden(body["message"] as? String ?? "Forbidden")
         case 404:
+            let code404 = body["code"] as? String
+            if code404 != nil {
+                throw CoCartError.api(body["message"] as? String ?? "Not found",
+                                      statusCode: 404, code: code404)
+            }
             throw CoCartError.notFound(body["message"] as? String ?? "Not found")
         case 429:
             let retryAfter = headers["retry-after"].flatMap(Int.init)
