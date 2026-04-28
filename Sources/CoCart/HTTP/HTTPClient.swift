@@ -42,6 +42,25 @@ final class HTTPClient {
         return try await execute(request, path: path)
     }
 
+    func getRaw(_ path: String, queryParams: [String: String]? = nil) async throws -> CoCartResponse {
+        let base = siteURL.trimmingCharacters(in: .init(charactersIn: "/"))
+        var urlString = "\(base)/\(options.restPrefix)/\(path)"
+        if let params = queryParams, !params.isEmpty {
+            let query = params.map { "\($0.key)=\($0.value)" }.joined(separator: "&")
+            urlString += "?" + query
+        }
+        guard let requestURL = URL(string: urlString) else {
+            throw CoCartError.network("Invalid URL: \(urlString)")
+        }
+        var request = URLRequest(url: requestURL)
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let authValue = auth.authorizationHeaderValue() {
+            request.setValue(authValue, forHTTPHeaderField: options.authHeaderName)
+        }
+        return try await execute(request, path: path)
+    }
+
     func postRaw(_ path: String, body: [String: Any]? = nil) async throws -> CoCartResponse {
         let url = "\(siteURL.trimmingCharacters(in: .init(charactersIn: "/")))/\(options.restPrefix)/\(path)"
         guard let requestURL = URL(string: url) else {

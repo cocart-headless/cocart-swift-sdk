@@ -38,6 +38,10 @@ public final class CoCart {
         JWTResource(http: http, auth: auth)
     }
 
+    public func account() -> AccountResource {
+        AccountResource(http: http)
+    }
+
     // MARK: - Guest Session
 
     public var cartKey: String? { auth.cartKey }
