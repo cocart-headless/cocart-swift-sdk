@@ -15,7 +15,7 @@ CoCartError
 ├── .api(String, statusCode: Int, code: String?)  — other API errors
 ├── .network(String)                  — connection/timeout failures
 ├── .validation(String)               — bad input (client-side)
-└── .version(String)                  — method requires CoCart Basic
+└── .version(String)                  — method requires CoCart Starter
 ```
 
 `CoCartError` conforms to `LocalizedError`, so you can use `error.localizedDescription` or `error.errorDescription` to get a human-readable message.
@@ -60,7 +60,7 @@ do {
         print("Network Error: \(message)")
 
     case .version(let message):
-        // Method requires CoCart Basic
+        // Method requires CoCart Starter
         print("Version Error: \(message)")
     }
 }
