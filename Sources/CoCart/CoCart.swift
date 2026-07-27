@@ -130,4 +130,17 @@ public final class CoCart {
     public func logout() async throws {
         try await jwt().logout()
     }
+
+    // MARK: - Batch
+
+    /// Dispatch multiple sub-requests in a single call via `{namespace}/batch`
+    /// (requires CoCart Plus).
+    ///
+    /// Returns one merged, up-to-date cart response with per-operation
+    /// notices, instead of one response per request. See
+    /// `CartResource.batchUpdateItems()` / `CartResource.batchRemoveItems()`
+    /// for typed convenience wrappers over this.
+    public func batch(_ requests: [BatchRequestItem]) async throws -> CoCartResponse {
+        try await http.batch(requests)
+    }
 }

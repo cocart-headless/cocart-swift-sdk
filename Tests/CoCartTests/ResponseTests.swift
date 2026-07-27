@@ -81,6 +81,38 @@ final class ResponseTests: XCTestCase {
         XCTAssertEqual(response.toDictionary()["key"] as? String, "val")
     }
 
+    func testGetTaxesReturnsArrayAsIs() {
+        let response = CoCartResponse(
+            data: ["taxes": [["key": "total", "name": "Tax", "price": "1.00"]]],
+            headers: [:],
+            statusCode: 200
+        )
+        let taxes = response.getTaxes()
+        XCTAssertEqual(taxes.count, 1)
+        XCTAssertEqual(taxes.first?["key"] as? String, "total")
+        XCTAssertTrue(response.hasTaxes())
+    }
+
+    func testGetTaxesNormalizesLegacyKeyedObject() {
+        let response = CoCartResponse(
+            data: ["taxes": ["US-US-1": ["name": "State Tax", "price": "2.50"]]],
+            headers: [:],
+            statusCode: 200
+        )
+        let taxes = response.getTaxes()
+        XCTAssertEqual(taxes.count, 1)
+        XCTAssertEqual(taxes.first?["key"] as? String, "US-US-1")
+        XCTAssertEqual(taxes.first?["name"] as? String, "State Tax")
+        XCTAssertEqual(taxes.first?["price"] as? String, "2.50")
+        XCTAssertTrue(response.hasTaxes())
+    }
+
+    func testHasTaxesFalseWhenEmpty() {
+        let response = CoCartResponse(data: [:], headers: [:], statusCode: 200)
+        XCTAssertFalse(response.hasTaxes())
+        XCTAssertEqual(response.getTaxes().count, 0)
+    }
+
     func testDecode() throws {
         struct TestModel: Decodable {
             let name: String

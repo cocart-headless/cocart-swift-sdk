@@ -44,6 +44,33 @@ public struct CoCartResponse {
     public func getCartHash() -> String? { getString("cart_hash") }
     public func getNotices() -> [[String: Any]] { get("notices") as? [[String: Any]] ?? [] }
     public func getCurrency() -> [String: Any]? { get("currency") as? [String: Any] }
+
+    /// Get cart tax lines, normalized to a flat array — one entry per tax
+    /// rate when the store's tax display setting is itemized.
+    ///
+    /// CoCart Starter 5.0+ already returns this shape as an array. The
+    /// community CoCart plugin (and older Starter versions) instead return
+    /// an object keyed by the tax rate code, e.g. `{ "US-US-1": { name,
+    /// price } }` — that legacy shape is detected and converted here so
+    /// callers never need to branch on which plugin/version they're talking to.
+    public func getTaxes() -> [[String: Any]] {
+        guard let raw = get("taxes") else { return [] }
+        if let array = raw as? [[String: Any]] {
+            return array
+        }
+        guard let legacy = raw as? [String: Any] else { return [] }
+        return legacy.map { key, value -> [String: Any] in
+            let tax = value as? [String: Any] ?? [:]
+            var entry: [String: Any] = ["key": key]
+            if let name = tax["name"] { entry["name"] = name }
+            if let price = tax["price"] { entry["price"] = price }
+            return entry
+        }
+    }
+
+    /// Check if the cart has any tax lines.
+    public func hasTaxes() -> Bool { !getTaxes().isEmpty }
+
     public func getCacheStatus() -> String? { headers["cocart-cache"] }
     public func isNotModified() -> Bool { statusCode == 304 }
 

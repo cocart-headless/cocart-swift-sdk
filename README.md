@@ -16,7 +16,7 @@ Official Swift SDK for the [CoCart](https://cocartapi.com) REST API — a native
 * [ ] Add SDK docs to documentation site
 * [ ] Add support for Cart API extras
 * [ ] Add Checkout API support
-* [ ] Add Customers Account API support
+* [x] Add Customers Account API support — implemented in the SDK ([`client.account()`](docs/account.md)), but the Account API itself is not yet available in a released version of the CoCart plugin. This SDK support is ready for when it ships.
 
 ---
 
@@ -104,6 +104,7 @@ print(cart.get("totals.total"))       // Reach into nested data with dot notatio
 | [Cart API](docs/cart.md) | Add, update, remove items, coupons, shipping, fees |
 | [Products API](docs/products.md) | List, filter, search, categories, tags, attributes |
 | [Sessions API](docs/sessions.md) | Admin sessions, storage adapters, guest session lifecycle |
+| [Account API](docs/account.md) | Customer profile, password, order history, downloads, and reviews (supported by the SDK, not yet released in the CoCart plugin) |
 | [Error Handling](docs/error-handling.md) | Error types, catching errors, common scenarios |
 | [Utilities](docs/utilities.md) | Currency formatter, event system, secure session storage |
 

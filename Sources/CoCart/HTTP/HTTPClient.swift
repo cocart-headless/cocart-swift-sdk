@@ -3,13 +3,50 @@ import Foundation
 public enum CoCartEvent: Hashable { case request, response, error }
 public typealias CoCartEventPayload = [String: Any]
 
+/// A single sub-request queued for `HTTPClient.batch()` / `CoCart.batch()`.
+public struct BatchRequestItem {
+    public let method: String
+    public let path: String
+    public let body: [String: Any]?
+
+    public init(method: String, path: String, body: [String: Any]? = nil) {
+        self.method = method
+        self.path = path
+        self.body = body
+    }
+}
+
+/// Coalesces concurrent identical GET requests into a single in-flight task,
+/// so simultaneous callers share one network round trip instead of firing
+/// one request each.
+private actor InFlightGetTracker {
+    private var tasks: [String: Task<CoCartResponse, Error>] = [:]
+
+    func run(key: String, operation: @escaping () async throws -> CoCartResponse) async throws -> CoCartResponse {
+        if let existing = tasks[key] {
+            return try await existing.value
+        }
+        let task = Task { try await operation() }
+        tasks[key] = task
+        defer { tasks[key] = nil }
+        return try await task.value
+    }
+}
+
 final class HTTPClient {
     private let siteURL: String
     private var options: CoCartOptions
     private let auth: AuthManager
     private let session: URLSession
-    private var etagCache: [String: String] = [:]
+    private var etagCache: [String: ETagCacheEntry] = [:]
     private var eventHandlers: [CoCartEvent: [(CoCartEventPayload) -> Void]] = [:]
+    private let inFlightGets = InFlightGetTracker()
+
+    private struct ETagCacheEntry {
+        let etag: String
+        let body: [String: Any]
+        let headers: [String: String]
+    }
 
     init(siteURL: String, options: CoCartOptions, auth: AuthManager,
          session: URLSession = .shared) {
@@ -25,7 +62,10 @@ final class HTTPClient {
 
     func get(_ path: String, queryParams: [String: String]? = nil) async throws -> CoCartResponse {
         let request = try buildRequest(method: "GET", path: path, queryParams: mergedParams(queryParams))
-        return try await execute(request, path: path)
+        let key = request.url?.absoluteString ?? path
+        return try await inFlightGets.run(key: key) { [self] in
+            try await execute(request, path: path)
+        }
     }
 
     func post(_ path: String, body: [String: Any]? = nil,
@@ -58,7 +98,10 @@ final class HTTPClient {
         if let authValue = auth.authorizationHeaderValue() {
             request.setValue(authValue, forHTTPHeaderField: options.authHeaderName)
         }
-        return try await execute(request, path: path)
+        let key = requestURL.absoluteString
+        return try await inFlightGets.run(key: key) { [self] in
+            try await execute(request, path: path)
+        }
     }
 
     func postRaw(_ path: String, body: [String: Any]? = nil) async throws -> CoCartResponse {
@@ -76,6 +119,32 @@ final class HTTPClient {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         }
         return try await execute(request, path: path)
+    }
+
+    /// Dispatch multiple sub-requests in a single call via `{namespace}/batch`
+    /// (requires CoCart Plus). Throws `cocart_plugin_required` if the batch
+    /// route isn't registered on the server.
+    func batch(_ requests: [BatchRequestItem]) async throws -> CoCartResponse {
+        guard !requests.isEmpty else {
+            throw CoCartError.validation("batch() requires at least one request.")
+        }
+        let items: [[String: Any]] = requests.map { request in
+            var dict: [String: Any] = ["method": request.method, "path": request.path]
+            if let body = request.body { dict["body"] = body }
+            return dict
+        }
+        do {
+            return try await postRaw("\(options.namespace)/batch", body: ["requests": items])
+        } catch {
+            if case CoCartError.api(_, let statusCode, let code) = error, code == "rest_no_route" {
+                throw CoCartError.api(
+                    "This method requires the CoCart Plus plugin. Please ask support for assistance!",
+                    statusCode: statusCode,
+                    code: "cocart_plugin_required"
+                )
+            }
+            throw error
+        }
     }
 
     private func mergedParams(_ params: [String: String]?) -> [String: String] {
@@ -107,14 +176,15 @@ final class HTTPClient {
             request.setValue(authValue, forHTTPHeaderField: options.authHeaderName)
         }
 
-        // Cart key headers for guest sessions
+        // Cart key header — send only the header name the configured plugin actually
+        // reads: legacy plugin versions expect `CoCart-API-Cart-Key`, current ones `Cart-Key`.
         if let cartKey = auth.guestCartKey {
-            request.setValue(cartKey, forHTTPHeaderField: "Cart-Key")
-            request.setValue(cartKey, forHTTPHeaderField: "CoCart-API-Cart-Key")
+            let cartKeyHeader = options.mainPlugin == .legacy ? "CoCart-API-Cart-Key" : "Cart-Key"
+            request.setValue(cartKey, forHTTPHeaderField: cartKeyHeader)
         }
 
-        if options.etag, let etag = etagCache[path] {
-            request.setValue(etag, forHTTPHeaderField: "If-None-Match")
+        if options.etag, method == "GET", let cached = etagCache[url.absoluteString] {
+            request.setValue(cached.etag, forHTTPHeaderField: "If-None-Match")
         }
 
         for (key, value) in options.extraHeaders {
@@ -128,6 +198,8 @@ final class HTTPClient {
                          attempt: Int = 0) async throws -> CoCartResponse {
         emit(.request, payload: ["method": request.httpMethod ?? "", "url": request.url?.absoluteString ?? ""])
         let start = Date()
+        let isGet = request.httpMethod == "GET"
+        let cacheKey = request.url?.absoluteString ?? path
 
         do {
             let (data, urlResponse) = try await session.data(for: request)
@@ -145,11 +217,14 @@ final class HTTPClient {
                 }
             )
 
-            if options.etag, let etag = headers["etag"] {
-                etagCache[path] = etag
-            }
-
+            // A 304 has no body — reuse the body/headers cached alongside the ETag
+            // that produced the match, so callers still get the actual data instead
+            // of an empty object. Falls back to the live (empty) response if we
+            // somehow have no cache entry for this URL.
             if http.statusCode == 304 {
+                if let cached = etagCache[cacheKey] {
+                    return CoCartResponse(data: cached.body, headers: cached.headers, statusCode: 304)
+                }
                 return CoCartResponse(data: [:], headers: headers, statusCode: 304)
             }
 
@@ -158,6 +233,11 @@ final class HTTPClient {
                 body = [:]
             } else {
                 body = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
+            }
+
+            // ETag: cache the ETag + body from a fresh (non-304) GET response.
+            if options.etag, isGet, let etag = headers["etag"] {
+                etagCache[cacheKey] = ETagCacheEntry(etag: etag, body: body, headers: headers)
             }
 
             auth.captureCartKey(from: body, headers: headers)
@@ -169,11 +249,19 @@ final class HTTPClient {
             throw error
         } catch {
             if attempt < options.maxRetries {
-                try await Task.sleep(nanoseconds: UInt64(500_000_000 * pow(2.0, Double(attempt))))
+                try await Task.sleep(nanoseconds: retryDelayNanoseconds(attempt: attempt))
                 return try await execute(request, path: path, attempt: attempt + 1)
             }
             throw CoCartError.network(error.localizedDescription)
         }
+    }
+
+    /// Exponential backoff (`500ms * 2^attempt`) with ±20% jitter, so many
+    /// clients retrying at once don't re-collide on the same schedule.
+    private func retryDelayNanoseconds(attempt: Int) -> UInt64 {
+        let base = 500_000_000.0 * pow(2.0, Double(attempt))
+        let jitter = 0.8 + Double.random(in: 0...1) * 0.4
+        return UInt64(base * jitter)
     }
 
     private func handleResponse(body: [String: Any], headers: [String: String],

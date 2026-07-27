@@ -108,15 +108,24 @@ let response = try await client.cart().addVariation(456, quantity: 1, attributes
 ])
 ```
 
-### Add Multiple Items at Once
+### Add Multiple Children of a Grouped Product at Once
+
+`addItems()` is **not** a generic "add several unrelated products" call — the server's `add-items` endpoint only supports adding children of a single WooCommerce **Grouped Product** in one request. Pass the grouped product's ID plus a map of child product ID to quantity:
 
 ```swift
-let response = try await client.cart().addItems([
-    ["id": "123", "quantity": "2"],
-    ["id": "456", "quantity": "1"],
-    ["id": "789", "quantity": "3"]
+let response = try await client.cart().addItems(100, items: [
+    "123": 2,
+    "456": 1
+])
+
+// Or as an ordered array of (id, quantity) entries
+let response = try await client.cart().addItems(100, items: [
+    (id: "123", quantity: 2),
+    (id: "456", quantity: 1)
 ])
 ```
+
+To add several unrelated products in a single request, use [`client.batch()`](#batch-requests) instead.
 
 ## Updating Items
 
@@ -134,8 +143,19 @@ let response = try await client.cart().updateItem("abc123def456...", quantity: 3
 
 ### Update Multiple Items at Once
 
+There is no real bulk-update endpoint on the server, so this sends one `updateItem()` request per entry, sequentially, and returns the response from the last update:
+
 ```swift
 let response = try await client.cart().updateItems([
+    "abc123def456...": 3,
+    "def789ghi012...": 1
+])
+```
+
+For a true single round trip (requires the CoCart Plus plugin), use `batchUpdateItems()` instead, which dispatches every update through [`batch()`](#batch-requests):
+
+```swift
+let response = try await client.cart().batchUpdateItems([
     "abc123def456...": 3,
     "def789ghi012...": 1
 ])
@@ -151,8 +171,19 @@ let response = try await client.cart().removeItem("abc123def456...")
 
 ### Remove Multiple Items at Once
 
+There is no real bulk-remove endpoint on the server, so this sends one `removeItem()` request per item, sequentially, and returns the response from the last removal:
+
 ```swift
 let response = try await client.cart().removeItems([
+    "abc123def456...",
+    "def789ghi012..."
+])
+```
+
+For a true single round trip (requires the CoCart Plus plugin), use `batchRemoveItems()` instead:
+
+```swift
+let response = try await client.cart().batchRemoveItems([
     "abc123def456...",
     "def789ghi012..."
 ])
@@ -259,8 +290,10 @@ let response = try await client.cart().checkCoupons()
 
 ### Update Customer
 
+Billing fields are sent unprefixed and shipping fields are sent `s_`-prefixed, matching the server's actual `update-customer` callback. If you omit `shipping` (or pass an empty dictionary), billing is mirrored into the shipping fields — same as leaving "ship to a different address" unchecked at a normal WooCommerce checkout — and `ship_to_different_address` is left unset. It's only sent as `true` when you provide a distinct shipping address.
+
 ```swift
-// Update billing address
+// Update billing address only (shipping mirrors billing)
 let response = try await client.cart().updateCustomer(billing: [
     "first_name": "John",
     "last_name": "Doe",
@@ -273,7 +306,7 @@ let response = try await client.cart().updateCustomer(billing: [
     "country": "US"
 ])
 
-// Update both billing and shipping
+// Update both billing and a distinct shipping address
 let response = try await client.cart().updateCustomer(
     billing: ["email": "john@example.com"],
     shipping: ["address_1": "456 Oak Ave", "city": "Los Angeles", "state": "CA"]
@@ -298,19 +331,21 @@ let response = try await client.cart().getShippingMethods()
 
 > Requires the CoCart Plus plugin.
 
+Select a rate for a shipping package. `rateID` is the rate's key from a shipping package's `rates` map (e.g. `flat_rate:1`). Omit `packageID` to apply the rate to every package:
+
 ```swift
 let response = try await client.cart().setShippingMethod("flat_rate:1")
+
+// Restrict the selection to a single package
+let response = try await client.cart().setShippingMethod("flat_rate:1", packageID: "0")
 ```
 
 ### Calculate Shipping
 
+> **Deprecated.** There is no address-taking shipping-calculation endpoint in the CoCart REST API. `calculateShipping()` now ignores its `address` argument and just delegates to `calculate()`. To calculate shipping for a destination, call `updateCustomer()` with that address first (the server recalculates totals as part of that request), then call `calculate()` — or just call `calculate()` directly.
+
 ```swift
-let response = try await client.cart().calculateShipping([
-    "country": "US",
-    "state": "CA",
-    "postcode": "90001",
-    "city": "Los Angeles"
-])
+let response = try await client.cart().calculate()
 ```
 
 ## Fees
@@ -347,9 +382,24 @@ let response = try await client.cart().removeFees()
 let response = try await client.cart().getCrossSells()
 ```
 
+## Batch Requests
+
+> Requires the CoCart Plus plugin.
+
+`client.batch()` dispatches multiple sub-requests in a single HTTP round trip via `{namespace}/batch`, and returns one merged, up-to-date cart response instead of one response per request. This is what `batchUpdateItems()` / `batchRemoveItems()` use under the hood, and is also useful for combining otherwise-unrelated cart operations (including adding several unrelated products, which `addItems()` no longer does):
+
+```swift
+let response = try await client.batch([
+    BatchRequestItem(method: "POST", path: "/cocart/v2/cart/add-item", body: ["id": "123", "quantity": "2"]),
+    BatchRequestItem(method: "POST", path: "/cocart/v2/cart/add-item", body: ["id": "456", "quantity": "1"]),
+])
+```
+
+If the server doesn't have the batch route registered (CoCart Plus isn't active), this throws `CoCartError.api` with `code == "cocart_plugin_required"`.
+
 ## ETag / Conditional Requests
 
-**ETag** (Entity Tag) is a caching mechanism. When the server responds, it includes an `ETag` header — a unique fingerprint of the data. On the next request, the SDK automatically sends this fingerprint back via `If-None-Match`. If the data hasn't changed, the server responds with `304 Not Modified` (no body), saving bandwidth and speeding up responses.
+**ETag** (Entity Tag) is a caching mechanism. When the server responds, it includes an `ETag` header — a unique fingerprint of the data. On the next request, the SDK automatically sends this fingerprint back via `If-None-Match`. If the data hasn't changed, the server responds with `304 Not Modified` (no body); the SDK now transparently returns the cached body/headers from the matching fresh request instead of an empty response, saving bandwidth and speeding up responses without changing what you get back.
 
 ETag support is **enabled by default**.
 
@@ -361,6 +411,7 @@ let response = try await client.cart().get()
 let response2 = try await client.cart().get()
 if response2.isNotModified() {
     print("Cart has not changed")
+    // response2 still has the same cart data as `response`
 }
 ```
 
@@ -407,6 +458,13 @@ let hash = response.getCartHash()
 
 // Notices
 let notices = response.getNotices()
+
+// Tax lines, normalized to a flat array of { key, name, price } regardless
+// of whether the server returned an array or a legacy tax-rate-code-keyed object
+let taxes = response.getTaxes()
+if response.hasTaxes() {
+    print("Cart has \(taxes.count) tax line(s)")
+}
 
 // Dot-notation access
 let subtotal = response.getString("totals.subtotal")

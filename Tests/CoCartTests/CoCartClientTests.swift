@@ -73,4 +73,14 @@ final class CoCartClientTests: XCTestCase {
         XCTAssertEqual(client.cartKey, "guest_key")
         XCTAssertTrue(client.isGuest)
     }
+
+    func testBatchThrowsValidationErrorWhenEmpty() async throws {
+        let client = CoCart("https://example.com")
+        do {
+            _ = try await client.batch([])
+            XCTFail("Expected validation error")
+        } catch CoCartError.validation(_) {
+            // expected
+        }
+    }
 }
