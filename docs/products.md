@@ -113,10 +113,15 @@ let response = try await client.products().all(["stock_status": "onbackorder"])
 
 ## Single Product
 
-### By ID
+### By ID or SKU
+
+`get()` accepts either the numeric product/variation ID or the product's SKU — either one works the same way.
 
 ```swift
 let response = try await client.products().get(123)
+
+// Or by SKU
+let response = try await client.products().get("PCT-2024")
 
 print(response.getString("name"))
 print(response.getString("price"))

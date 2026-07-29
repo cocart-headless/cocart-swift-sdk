@@ -18,6 +18,13 @@ public final class ProductsResource {
         return try await http.get("products/\(productID)", queryParams: params)
     }
 
+    /// Get a single product by SKU. `GET /products/{id}` accepts either the
+    /// numeric product/variation ID or the product's SKU in the same path segment.
+    public func get(_ sku: String, params: [String: String]? = nil) async throws -> CoCartResponse {
+        try validateProductID(sku)
+        return try await http.get("products/\(sku)", queryParams: params)
+    }
+
     public func variations(_ productID: Int, params: [String: String]? = nil) async throws -> CoCartResponse {
         try validateProductID(productID)
         return try await http.get("products/\(productID)/variations", queryParams: params)

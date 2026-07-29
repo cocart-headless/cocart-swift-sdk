@@ -33,8 +33,22 @@ public final class CartResource {
         return try await http.post("cart/add-item", body: body)
     }
 
+    /// Add an item to the cart by SKU. Both resolve a non-numeric `id` before falling back to a 404.
+    public func addItem(_ sku: String, quantity: Double,
+                        options: [String: Any]? = nil) async throws -> CoCartResponse {
+        try validateProductID(sku)
+        try validateQuantity(quantity)
+        var body: [String: Any] = ["id": sku, "quantity": "\(quantity)"]
+        options?.forEach { body[$0.key] = $0.value }
+        return try await http.post("cart/add-item", body: body)
+    }
+
     public func add(_ productID: Int, quantity: Double) async throws -> CoCartResponse {
         try await addItem(productID, quantity: quantity)
+    }
+
+    public func add(_ sku: String, quantity: Double) async throws -> CoCartResponse {
+        try await addItem(sku, quantity: quantity)
     }
 
     public func addVariation(_ productID: Int, quantity: Double,
@@ -43,6 +57,19 @@ public final class CartResource {
         try validateQuantity(quantity)
         return try await http.post("cart/add-item", body: [
             "id": "\(productID)",
+            "quantity": "\(quantity)",
+            "variation": attributes
+        ])
+    }
+
+    /// Add a variable product to the cart by SKU. See `addItem(_:quantity:options:)`
+    /// for why a SKU is accepted here.
+    public func addVariation(_ sku: String, quantity: Double,
+                             attributes: [String: String]) async throws -> CoCartResponse {
+        try validateProductID(sku)
+        try validateQuantity(quantity)
+        return try await http.post("cart/add-item", body: [
+            "id": sku,
             "quantity": "\(quantity)",
             "variation": attributes
         ])
@@ -72,8 +99,32 @@ public final class CartResource {
         ])
     }
 
+    /// Add multiple children of a Grouped Product to the cart by the parent's
+    /// SKU. See `addItem(_:quantity:options:)` for why a SKU is accepted for
+    /// `groupedProductID` — note the child `items` map keys must still be
+    /// numeric IDs, they are not resolved as SKUs server-side.
+    public func addItems(_ groupedProductID: String, items: [String: Int]) async throws -> CoCartResponse {
+        try validateProductID(groupedProductID)
+        guard !items.isEmpty else {
+            throw CoCartError.validation("addItems() requires at least one item.")
+        }
+        let quantity = items.mapValues { "\($0)" }
+        return try await http.post("cart/add-items", body: [
+            "id": groupedProductID,
+            "quantity": quantity
+        ])
+    }
+
     /// Convenience overload accepting an ordered array of `(id, quantity)` entries.
     public func addItems(_ groupedProductID: Int,
+                         items: [(id: String, quantity: Int)]) async throws -> CoCartResponse {
+        var map: [String: Int] = [:]
+        for item in items { map[item.id] = item.quantity }
+        return try await addItems(groupedProductID, items: map)
+    }
+
+    /// Convenience overload accepting an ordered array of `(id, quantity)` entries, by the parent's SKU.
+    public func addItems(_ groupedProductID: String,
                          items: [(id: String, quantity: Int)]) async throws -> CoCartResponse {
         var map: [String: Int] = [:]
         for item in items { map[item.id] = item.quantity }

@@ -16,6 +16,28 @@ final class ValidatorsTests: XCTestCase {
         XCTAssertThrowsError(try validateProductID(-1))
     }
 
+    func testValidateProductIDStringNumericPositive() {
+        XCTAssertNoThrow(try validateProductID("1"))
+        XCTAssertNoThrow(try validateProductID("999"))
+    }
+
+    func testValidateProductIDStringAcceptsNonNumericAsPotentialSKU() {
+        XCTAssertNoThrow(try validateProductID("abc"))
+        XCTAssertNoThrow(try validateProductID("BLUE-SHIRT-L"))
+        XCTAssertNoThrow(try validateProductID("123ABC"))
+    }
+
+    func testValidateProductIDStringEmptyThrows() {
+        XCTAssertThrowsError(try validateProductID(""))
+        XCTAssertThrowsError(try validateProductID("   "))
+    }
+
+    func testValidateProductIDStringNumericNotPositiveIntegerThrows() {
+        XCTAssertThrowsError(try validateProductID("0"))
+        XCTAssertThrowsError(try validateProductID("-1"))
+        XCTAssertThrowsError(try validateProductID("1.5"))
+    }
+
     func testValidateQuantityPositive() {
         XCTAssertNoThrow(try validateQuantity(1.0))
         XCTAssertNoThrow(try validateQuantity(0.5))

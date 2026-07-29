@@ -82,6 +82,9 @@ let response = try await client.cart().addItem(123, quantity: 2)
 
 // Shorthand
 let response = try await client.cart().add(123, quantity: 2)
+
+// A SKU also works — the server resolves it to a product ID
+let response = try await client.cart().addItem("BLUE-SHIRT-L", quantity: 1)
 ```
 
 ### Add with Options

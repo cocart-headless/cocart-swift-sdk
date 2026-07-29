@@ -65,6 +65,65 @@ final class CartResourceTests: XCTestCase {
         }
     }
 
+    func testAddItemsAcceptsSkuForGroupedProductID() async throws {
+        var capturedBody: [String: Any]?
+        MockURLProtocol.requestHandler = { req in
+            if let data = req.httpBody {
+                capturedBody = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            }
+            return try self.jsonResponse(req, body: [:] as [String: Any])
+        }
+
+        _ = try await makeResource().addItems("GROUPED-SKU", items: ["1": 2])
+
+        XCTAssertEqual(capturedBody?["id"] as? String, "GROUPED-SKU")
+    }
+
+    // MARK: - addItem / addVariation (SKU support)
+
+    func testAddItemAcceptsNumericProductID() async throws {
+        var capturedBody: [String: Any]?
+        MockURLProtocol.requestHandler = { req in
+            if let data = req.httpBody {
+                capturedBody = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            }
+            return try self.jsonResponse(req, body: ["item_key": "abc"])
+        }
+
+        _ = try await makeResource().addItem(123, quantity: 2)
+
+        XCTAssertEqual(capturedBody?["id"] as? String, "123")
+        XCTAssertEqual(capturedBody?["quantity"] as? String, "2.0")
+    }
+
+    func testAddItemAcceptsSku() async throws {
+        var capturedBody: [String: Any]?
+        MockURLProtocol.requestHandler = { req in
+            if let data = req.httpBody {
+                capturedBody = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            }
+            return try self.jsonResponse(req, body: ["item_key": "abc"])
+        }
+
+        _ = try await makeResource().addItem("BLUE-SHIRT-L", quantity: 1)
+
+        XCTAssertEqual(capturedBody?["id"] as? String, "BLUE-SHIRT-L")
+    }
+
+    func testAddVariationAcceptsSku() async throws {
+        var capturedBody: [String: Any]?
+        MockURLProtocol.requestHandler = { req in
+            if let data = req.httpBody {
+                capturedBody = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            }
+            return try self.jsonResponse(req, body: ["item_key": "abc"])
+        }
+
+        _ = try await makeResource().addVariation("VAR-SKU-1", quantity: 1, attributes: ["attribute_pa_color": "blue"])
+
+        XCTAssertEqual(capturedBody?["id"] as? String, "VAR-SKU-1")
+    }
+
     // MARK: - updateItems (per-item loop)
 
     func testUpdateItemsSendsOneRequestPerItem() async throws {
