@@ -1,3 +1,5 @@
+// The Keychain is Apple-only (the Security framework), so this storage exists only there.
+#if canImport(Security)
 import Foundation
 import Security
 
@@ -49,3 +51,4 @@ public final class KeychainStorage: CoCartStorage {
         SecItemDelete(query as CFDictionary)
     }
 }
+#endif

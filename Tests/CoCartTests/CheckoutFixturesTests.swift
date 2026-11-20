@@ -1,5 +1,8 @@
 import XCTest
 @testable import CoCart
+#if canImport(FoundationNetworking)
+import FoundationNetworking // URLSession on Linux and Windows
+#endif
 
 /// Replays the shared checkout fixtures (Tests/Fixtures/checkout, copied from cocart-js's
 /// packages/checkout/tests/fixtures): the same request/response data every CoCart SDK runs,

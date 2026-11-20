@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking // URLSession on Linux and Windows
+#endif
 
 public enum CoCartEvent: Hashable { case request, response, error }
 public typealias CoCartEventPayload = [String: Any]

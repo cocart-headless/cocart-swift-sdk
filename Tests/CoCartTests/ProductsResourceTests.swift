@@ -1,5 +1,8 @@
 import XCTest
 @testable import CoCart
+#if canImport(FoundationNetworking)
+import FoundationNetworking // URLSession on Linux and Windows
+#endif
 
 final class ProductsResourceTests: XCTestCase {
 

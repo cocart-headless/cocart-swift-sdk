@@ -39,7 +39,7 @@ let client = CoCart("https://your-store.com", options: CoCartOptions(
     // so an order or a cart change is never sent twice
     maxRetries: 2,
 
-    // Storage adapter — KeychainStorage by default, MemoryStorage for tests/previews
+    // Storage adapter — KeychainStorage by default on Apple platforms (MemoryStorage elsewhere), MemoryStorage for tests/previews
     storage: MemoryStorage(),
     storageKey: "cocart_cart_key",
 

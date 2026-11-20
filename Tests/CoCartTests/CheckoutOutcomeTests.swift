@@ -1,5 +1,8 @@
 import XCTest
 @testable import CoCart
+#if canImport(FoundationNetworking)
+import FoundationNetworking // URLSession on Linux and Windows
+#endif
 
 /// `placeOrder` sends a `checkout_id`, and when no answer comes back it says so with that ID,
 /// for `getStatus` to tell how the checkout ended.

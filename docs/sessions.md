@@ -59,7 +59,7 @@ All storage adapters conform to the same `CoCartStorage` protocol, so you can sw
 
 ### KeychainStorage
 
-The default storage adapter. Uses Apple's Keychain Services to securely store cart keys and other sensitive data. Data is encrypted at rest by the operating system and persists across app launches, device reboots, and app updates.
+The default storage adapter on Apple platforms. Uses Apple's Keychain Services to securely store cart keys and other sensitive data. The Keychain doesn't exist on Linux or Windows, so there the SDK defaults to `MemoryStorage`, and `KeychainStorage` isn't available. Data is encrypted at rest by the operating system and persists across app launches, device reboots, and app updates.
 
 ```swift
 // Used automatically — no configuration needed

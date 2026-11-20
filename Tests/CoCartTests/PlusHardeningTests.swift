@@ -1,5 +1,8 @@
 import XCTest
 @testable import CoCart
+#if canImport(FoundationNetworking)
+import FoundationNetworking // URLSession on Linux and Windows
+#endif
 
 /// Client hardening for CoCart Plus 2.0: rate-limit headers, debug output, the ETag cache, the
 /// raw (CoCart Plus) requests' events, error mapping and the error's field details.

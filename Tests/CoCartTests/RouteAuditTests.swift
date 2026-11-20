@@ -1,5 +1,8 @@
 import XCTest
 @testable import CoCart
+#if canImport(FoundationNetworking)
+import FoundationNetworking // URLSession on Linux and Windows
+#endif
 
 /// Records every request and answers with the queued responses (then `{}`).
 final class RecordingServer {

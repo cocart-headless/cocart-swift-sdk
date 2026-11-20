@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking // URLSession on Linux and Windows
+#endif
 
 public final class CoCart {
     public let siteURL: String
@@ -15,7 +18,12 @@ public final class CoCart {
     init(_ siteURL: String, options: CoCartOptions, session: URLSession) {
         self.siteURL = siteURL
         self.options = options
+        #if canImport(Security)
         let storage = options.storage ?? KeychainStorage()
+        #else
+        // No Keychain off Apple platforms: keep the cart key in memory unless a storage is given.
+        let storage = options.storage ?? MemoryStorage()
+        #endif
         self.auth = AuthManager(options: options, storage: storage)
         self.http = HTTPClient(siteURL: siteURL, options: options, auth: auth, session: session)
     }
