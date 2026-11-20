@@ -10,20 +10,29 @@ public final class JWTResource {
         self.auth = auth
     }
 
-    /// Log in with username and password to acquire JWT tokens.
+    /// Log in with username and password to acquire JWT tokens (`POST login`, with the
+    /// CoCart JWT Authentication plugin).
     ///
     /// If the user has 2FA enabled, throws `CoCartError.twoFactorRequired`.
     /// Catch that error, prompt for the verification code, then call `verifyTwoFactor()`.
     public func login(_ identifier: String, password: String) async throws -> CoCartResponse {
-        let response = try await http.postRaw("cocart/jwt/token", body: [
+        let response = try await http.post("login", body: [
             "username": identifier,
             "password": password
         ])
-        guard let token = response.getString("token") else {
-            throw CoCartError.auth("JWT login failed — no token returned", code: nil)
+        return try storeTokens(response)
+    }
+
+    /// Keep the tokens a login sends under `extras` (`jwt_token`, `jwt_refresh`).
+    private func storeTokens(_ response: CoCartResponse) throws -> CoCartResponse {
+        guard let token = response.getString("extras.jwt_token") else {
+            throw CoCartError.auth(
+                "The login response has no JWT token. Is the CoCart JWT Authentication plugin active?",
+                code: "cocart_jwt_missing"
+            )
         }
         auth.setJWTToken(token)
-        if let refresh = response.getString("refresh_token") {
+        if let refresh = response.getString("extras.jwt_refresh") {
             auth.setRefreshToken(refresh)
         }
         return response
@@ -47,39 +56,39 @@ public final class JWTResource {
         ]
         if let provider { body["2fa_provider"] = provider }
 
-        let response = try await http.postRaw("cocart/jwt/token", body: body)
-        guard let token = response.getString("token") else {
-            throw CoCartError.auth("JWT token not found in 2FA login response", code: nil)
+        let response = try await http.post("login", body: body)
+        return try storeTokens(response)
+    }
+
+    /// Log out on the server (`POST logout`), then clear the tokens and cart key.
+    public func logout() async throws {
+        _ = try? await http.post("logout")
+        try await auth.clearSession()
+    }
+
+    /// Get a new access token with the refresh token (`POST {namespace}/jwt/refresh-token`).
+    public func refresh() async throws -> CoCartResponse {
+        guard let refreshToken = auth.activeRefreshToken else {
+            throw CoCartError.auth("No refresh token available", code: nil)
         }
-        auth.setJWTToken(token)
+        let response = try await http.postRaw("\(http.namespace)/jwt/refresh-token",
+                                              body: ["refresh_token": refreshToken])
+        if let token = response.getString("token") {
+            auth.setJWTToken(token)
+        }
         if let refresh = response.getString("refresh_token") {
             auth.setRefreshToken(refresh)
         }
         return response
     }
 
-    public func logout() async throws {
-        _ = try? await http.postRaw("cocart/jwt/logout")
-        try await auth.clearSession()
-    }
-
-    public func refresh() async throws -> CoCartResponse {
-        guard let refreshToken = auth.activeRefreshToken else {
-            throw CoCartError.auth("No refresh token available", code: nil)
-        }
-        let response = try await http.postRaw("cocart/jwt/refresh-token",
-                                              body: ["refresh_token": refreshToken])
-        if let token = response.getString("token") {
-            auth.setJWTToken(token)
-        }
-        return response
-    }
-
+    /// Check the JWT token with the server (`POST {namespace}/jwt/validate-token`).
+    /// `false` when the server refuses it.
     public func validate() async throws -> Bool {
         do {
-            let response = try await http.postRaw("cocart/jwt/validate-token")
-            return response.getInt("data.status") == 200
-        } catch {
+            _ = try await http.postRaw("\(http.namespace)/jwt/validate-token")
+            return true
+        } catch CoCartError.auth, CoCartError.forbidden {
             return false
         }
     }

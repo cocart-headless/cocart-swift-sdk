@@ -130,7 +130,7 @@ final class CartResourceTests: XCTestCase {
         var requestCount = 0
         MockURLProtocol.requestHandler = { req in
             requestCount += 1
-            return try self.jsonResponse(req, body: ["items_count": requestCount])
+            return try self.jsonResponse(req, body: ["item_count": requestCount])
         }
 
         let response = try await makeResource().updateItems(["abc": 2, "def": 3])
@@ -212,7 +212,7 @@ final class CartResourceTests: XCTestCase {
         do {
             _ = try await makeResource().batchUpdateItems(["abc": 1])
             XCTFail("Expected error to be thrown")
-        } catch CoCartError.api(_, _, let code) {
+        } catch CoCartError.api(_, _, let code, _) {
             XCTAssertEqual(code, "cocart_plugin_required")
         }
     }

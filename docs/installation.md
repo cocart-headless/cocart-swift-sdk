@@ -32,10 +32,11 @@ let client = CoCart("https://your-store.com", options: CoCartOptions(
     // API namespace (default: "cocart")
     namespace: "cocart",
 
-    // CoCart main plugin: .basic (default) or .legacy
-    mainPlugin: .basic,
+    // CoCart main plugin: .starter (default) or .legacy
+    mainPlugin: .starter,
 
-    // Retry transient failures (default: 2)
+    // Retry network failures (default: 2), for GETs only,
+    // so an order or a cart change is never sent twice
     maxRetries: 2,
 
     // Storage adapter — KeychainStorage by default, MemoryStorage for tests/previews
@@ -49,7 +50,7 @@ let client = CoCart("https://your-store.com", options: CoCartOptions(
     // Enable ETag conditional requests for reduced bandwidth (default: true)
     etag: true,
 
-    // Enable debug logging (default: false)
+    // Print each request and response (default: false). Query values show as ***.
     debug: true
 ))
 ```
@@ -67,7 +68,7 @@ let client = CoCart.create("https://your-store.com")
     .addHeader("X-Custom-Header", value: "value")
     .setAuthHeaderName("X-Auth-Token")
     .setETag(true)
-    .setMainPlugin(.basic)
+    .setMainPlugin(.starter)
     .setDebug(true)
 ```
 

@@ -8,12 +8,16 @@ public final class CoCart {
 
     // MARK: - Init
 
-    public init(_ siteURL: String, options: CoCartOptions = CoCartOptions()) {
+    public convenience init(_ siteURL: String, options: CoCartOptions = CoCartOptions()) {
+        self.init(siteURL, options: options, session: .shared)
+    }
+
+    init(_ siteURL: String, options: CoCartOptions, session: URLSession) {
         self.siteURL = siteURL
         self.options = options
         let storage = options.storage ?? KeychainStorage()
         self.auth = AuthManager(options: options, storage: storage)
-        self.http = HTTPClient(siteURL: siteURL, options: options, auth: auth)
+        self.http = HTTPClient(siteURL: siteURL, options: options, auth: auth, session: session)
     }
 
     public static func create(_ siteURL: String, options: CoCartOptions = CoCartOptions()) -> CoCart {
@@ -42,10 +46,18 @@ public final class CoCart {
         AccountResource(http: http)
     }
 
+    /// Checkout and payment (CoCart Plus 2.0).
+    public func checkout() -> CheckoutResource {
+        CheckoutResource(http: http)
+    }
+
     // MARK: - Guest Session
 
     public var cartKey: String? { auth.cartKey }
 
+    /// Restore the cart key kept by the storage (Keychain by default) from an earlier
+    /// launch. The storage is read asynchronously, so call this once after creating the
+    /// client, before the first cart request; without it, the app starts a new cart.
     public func restoreSession() async throws {
         try await auth.restoreSession()
     }

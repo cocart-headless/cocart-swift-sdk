@@ -95,6 +95,46 @@ print(cart.get("totals.total"))       // Reach into nested data with dot notatio
 > }
 > ```
 
+## Checkout at a Glance
+
+Checkout needs CoCart Plus 2.0. The card goes from the gateway's own SDK (stripe-ios with your publishable key, `pk_test_…` while testing) straight to the gateway; `payment_data` carries gateway tokens only.
+
+```swift
+let checkout = client.checkout()
+
+// 1. The review screen: CoCart Plus remembers the total it showed (don't call it just before placing).
+let review = try await checkout.get()
+
+// 2. Save what the customer enters, and show what wasn't applied (result.not_applied).
+let updated = try await checkout.update(["shipping_method": "flat_rate:1"])
+
+// 3. Place the order.
+do {
+    let result = try await checkout.placeOrder(order)
+    if result.isComplete {
+        // getOrderReceived(result.orderId!, result.orderKey!)
+    } else if result.isAwaitingPayment {
+        // a wallet, a voucher or a bank transfer: the customer pays with the gateway's SDK
+    } else if result.needsConfirmation {
+        // confirm result.clientSecret with the gateway's SDK, then placeOrder(order) again
+    } else if result.needsRedirect {
+        // send the customer to result.redirectUrl, then confirmReturn(_:) with the return URL
+    } else if result.isPending {
+        // the gateway hasn't confirmed yet: confirm again shortly
+    } else {
+        // isFailed: show result.message (plain text), then payForOrder(_:_:_:)
+    }
+} catch let error as CheckoutOutcomeUnknownError {
+    // No answer came back, or cocart_payment_in_progress: ask how it ended.
+    let status = try await checkout.getStatus(error.checkoutId)
+    // status.code: "order_placed", "payment_required" (payForOrder), "in_progress" (ask again), "not_placed" (place again)
+} catch let error as CoCartError where error.errorCode == "cocart_checkout_total_mismatch" {
+    // The total changed: get() again and show the new total.
+}
+```
+
+`CheckoutResult` has `code` (`order_placed`, `action_required`, `payment_pending`, `payment_failed`, `payment_method_changed`), `object`, `orderId`, `orderKey`, `orderNumber`, `orderStatus`, `subscriptionId`, `redirectUrl`, `clientSecret`, `intentType`, `paymentMethodType`, `actionType`, `actionData`, `message`, `errorCode`, `gatewayErrorCode`, `gatewayMessage` and `response`. Printing it never shows `clientSecret` or `orderKey`. Saved payment methods (`getSavedPaymentMethods()`) have a `label` such as "Visa ending in 4242". See [Checkout](docs/checkout.md).
+
 ## Documentation
 
 | Guide | Description |
@@ -102,10 +142,12 @@ print(cart.get("totals.total"))       // Reach into nested data with dot notatio
 | [Configuration & Setup](docs/installation.md) | Options, fluent config, white-labelling, legacy mode |
 | [Authentication](docs/authentication.md) | Guest, Basic Auth, JWT, consumer keys |
 | [Cart API](docs/cart.md) | Add, update, remove items, coupons, shipping, fees |
-| [Products API](docs/products.md) | List, filter, search, categories, tags, attributes |
+| [Products API](docs/products.md) | List, filter, search, sort, variations, categories, tags, attributes, brands, reviews, shipping rates, SEO |
 | [Sessions API](docs/sessions.md) | Admin sessions, storage adapters, guest session lifecycle |
-| [Account API](docs/account.md) | Customer profile, password, order history, downloads, and reviews (supported by the SDK, not yet released in the CoCart plugin) |
-| [Error Handling](docs/error-handling.md) | Error types, catching errors, common scenarios |
+| [Account API](docs/account.md) | Registration, customer profile, password, address, order history, downloads, reviews and subscriptions (supported by the SDK, not yet released in the CoCart plugin) |
+| [Checkout](docs/checkout.md) | Place orders and take payment (`CheckoutResult`), 3D Secure, wallets and vouchers, off-site steps, saved payment methods, the thank-you page, paying for unpaid orders, `getStatus()` when the outcome isn't known (CoCart Plus 2.0) |
+| [Error Handling](docs/error-handling.md) | Error types, catching errors, common scenarios, expired carts, rate limits |
+| [Extension Data](docs/extension-data.md) | Plugin data under `extensions` (CoCart Plus integrations), and sending a plan, gift or warranty choice |
 | [Utilities](docs/utilities.md) | Currency formatter, event system, secure session storage |
 
 ## CoCart Channels

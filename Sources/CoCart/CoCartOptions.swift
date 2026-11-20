@@ -30,7 +30,8 @@ public struct CoCartOptions {
     public var debug: Bool
 
     public enum MainPlugin {
-        case basic, legacy
+        /// CoCart Starter (the default), or the CoCart Community plugin (4.x).
+        case starter, legacy
     }
 
     public init(
@@ -46,7 +47,7 @@ public struct CoCartOptions {
         maxRetries: Int = 2,
         restPrefix: String = "wp-json",
         namespace: String = "cocart",
-        mainPlugin: MainPlugin = .basic,
+        mainPlugin: MainPlugin = .starter,
         authHeaderName: String = "Authorization",
         storage: CoCartStorage? = nil,
         extraHeaders: [String: String] = [:],

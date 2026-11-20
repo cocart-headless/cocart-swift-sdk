@@ -100,6 +100,8 @@ let response = try await client.cart().addItem(123, quantity: 1, options: [
 ])
 ```
 
+With CoCart Plus, the options also carry a subscription plan (`"convert_to_sub"`), a gift recipient (`"recipient_email"`) or a warranty (`"item_data": ["warranty": ...]`), and `changePlan(_:value:)` switches a cart item's plan. See [Extension Data](extension-data.md#sending-the-customers-choices).
+
 ### Add a Variable Product
 
 A **variable product** is a product with options like size or color. In WooCommerce, these are called "variations." When adding a variable product, you specify which variation the customer chose:
@@ -269,12 +271,20 @@ let response = try await client.cart().getItem("abc123def456...")
 
 ```swift
 let response = try await client.cart().applyCoupon("SUMMER20")
+
+// A coupon restricted to certain emails, before the cart knows the customer's
+let response = try await client.cart().applyCoupon("VIP10", email: "jane@example.com")
 ```
 
 ### Remove a Coupon
 
+The code is encoded, so spaces, `%`, `#` and `?` are fine:
+
 ```swift
 let response = try await client.cart().removeCoupon("SUMMER20")
+
+// Remove every coupon
+let response = try await client.cart().removeCoupons()
 ```
 
 ### Get Applied Coupons
@@ -287,6 +297,9 @@ let response = try await client.cart().getCoupons()
 
 ```swift
 let response = try await client.cart().checkCoupons()
+
+// Including email restrictions
+let response = try await client.cart().checkCoupons(email: "jane@example.com")
 ```
 
 ## Customer Details
@@ -328,6 +341,17 @@ let response = try await client.cart().getCustomer()
 
 ```swift
 let response = try await client.cart().getShippingMethods()
+
+// CoCart keys the packages by package ID under `shipping.packages`;
+// getShippingMethods() on the response lists them, each with its `rates`.
+for package in response.getShippingMethods() {
+    for (rateID, rate) in package["rates"] as? [String: [String: Any]] ?? [:] {
+        print("\(rateID): \(rate["label"] ?? "") (\(rate["cost"] ?? ""))") // cost in minor units, e.g. "500"
+    }
+}
+
+// The whole field: total_packages, has_calculated_shipping, packages
+let shipping = response.getShipping()
 ```
 
 ### Set Shipping Method
@@ -359,6 +383,9 @@ let response = try await client.cart().calculate()
 
 ```swift
 let response = try await client.cart().getFees()
+
+// The cart keys fees by fee ID; getFees() on the response lists them: [["name": "Gift wrap", "fee": "500"]]
+let fees = response.getFees()
 ```
 
 ### Add a Fee
@@ -369,12 +396,27 @@ let response = try await client.cart().addFee("Rush Processing", amount: 9.99)
 
 // Taxable fee
 let response = try await client.cart().addFee("Gift Wrapping", amount: 4.99, taxable: true)
+
+// Taxable, with a tax class
+let response = try await client.cart().addFee("Gift Wrapping", amount: 4.99, taxable: true, taxClass: "reduced-rate")
 ```
 
 ### Remove All Fees
 
 ```swift
 let response = try await client.cart().removeFees()
+```
+
+## Mini Cart and Removing All Items
+
+> Requires the CoCart Plus plugin.
+
+```swift
+// A lighter cart response for a header or drawer
+let mini = try await client.cart().getMini()
+
+// Remove every item but keep the cart's coupons, fees and customer details
+let response = try await client.cart().removeAllItems()
 ```
 
 ## Cross-Sells
@@ -459,8 +501,19 @@ let cartKey = response.getCartKey()
 // Cart hash
 let hash = response.getCartHash()
 
-// Notices
+// Notices, keyed by type: ["success": [...], "error": [...]], or empty when there are none
 let notices = response.getNotices()
+
+// Shipping packages as a list, and fees as a list (the cart keys both by ID)
+let packages = response.getShippingMethods()
+let fees = response.getFees()
+
+// Data plugins add to the cart, e.g. subscription recurring_totals (see extension-data.md)
+let extensions = response.getExtensions()
+
+// The RateLimit-* headers (CoCart Plus), and any header by name
+let rateLimit = response.getRateLimit()
+let expiring = response.getHeader("Cart-Expiring")
 
 // Tax lines, normalized to a flat array of { key, name, price } regardless
 // of whether the server returned an array or a legacy tax-rate-code-keyed object

@@ -26,7 +26,7 @@ final class HTTPClientTests: XCTestCase {
             return try self.jsonResponse(req, body: [:] as [String: Any])
         }
 
-        let http = makeClient(options: CoCartOptions(cartKey: "guest_abc", mainPlugin: .basic))
+        let http = makeClient(options: CoCartOptions(cartKey: "guest_abc", mainPlugin: .starter))
         _ = try await http.get("cart")
 
         XCTAssertEqual(capturedRequest?.value(forHTTPHeaderField: "Cart-Key"), "guest_abc")
@@ -54,7 +54,7 @@ final class HTTPClientTests: XCTestCase {
         MockURLProtocol.requestHandler = { req in
             callCount += 1
             if callCount == 1 {
-                return try self.jsonResponse(req, body: ["items_count": 3], headers: ["ETag": "\"abc123\""])
+                return try self.jsonResponse(req, body: ["item_count": 3], headers: ["ETag": "\"abc123\""])
             }
             XCTAssertEqual(req.value(forHTTPHeaderField: "If-None-Match"), "\"abc123\"")
             let response = HTTPURLResponse(url: req.url!, statusCode: 304, httpVersion: nil, headerFields: [:])!
@@ -92,7 +92,7 @@ final class HTTPClientTests: XCTestCase {
         MockURLProtocol.requestHandler = { req in
             counter.increment()
             Thread.sleep(forTimeInterval: 0.05)
-            return try self.jsonResponse(req, body: ["items_count": 1])
+            return try self.jsonResponse(req, body: ["item_count": 1])
         }
 
         let http = makeClient(options: CoCartOptions())
@@ -145,6 +145,25 @@ final class HTTPClientTests: XCTestCase {
         // should land comfortably above 1s and well under a fixed 3s ceiling.
         XCTAssertGreaterThan(elapsed, 1.0)
         XCTAssertLessThan(elapsed, 3.0)
+    }
+
+    func testDoesNotSendAPostAgainAfterATransientError() async throws {
+        let counter = Counter()
+        MockURLProtocol.requestHandler = { _ in
+            counter.increment()
+            throw URLError(.timedOut)
+        }
+
+        let http = makeClient(options: CoCartOptions(maxRetries: 2))
+
+        do {
+            _ = try await http.post("checkout", body: ["payment_method": "stripe"])
+            XCTFail("Expected network error")
+        } catch CoCartError.network(_) {
+            // expected
+        }
+
+        XCTAssertEqual(counter.value, 1, "a POST may have run before the connection dropped")
     }
 }
 

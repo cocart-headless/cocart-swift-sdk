@@ -40,6 +40,8 @@ try await client.restoreSession()
 let cart = try await client.cart().get()
 ```
 
+The Keychain is read asynchronously, so the client can't pick the key up while it's being created: call `restoreSession()` before the first cart request, or the app starts a new cart. If the stored cart has expired in the meantime, the client replaces it with a new one on its own (see [Error Handling](error-handling.md#expired-cart-key)).
+
 ### Resuming with a Known Cart Key
 
 If you already have a cart key, pass it directly:

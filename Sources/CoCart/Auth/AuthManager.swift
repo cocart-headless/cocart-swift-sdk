@@ -100,6 +100,12 @@ final class AuthManager {
         }
     }
 
+    /// Forget the cart key, in storage too, so the next request starts a new guest cart.
+    func forgetCartKey() async throws {
+        cartKey = nil
+        try await storage.delete(options.storageKey)
+    }
+
     func clearSession() async throws {
         cartKey = nil
         jwtToken = nil

@@ -24,6 +24,13 @@ public final class CartResource {
         return try await http.get("cart", queryParams: [param: fields.joined(separator: ",")])
     }
 
+    /// Add an item to the cart.
+    ///
+    /// `options` holds the request's other fields: `variation` (a variable product's
+    /// attributes), `item_data` (custom data), `email`, `price` and `return_item`, and the
+    /// choices for CoCart Plus's supported plugins: `convert_to_sub` (a subscription plan's
+    /// `value`, `"0"` for one-time), `recipient_email` (a gift's recipient) and `item_data`
+    /// `["warranty": key]` (a warranty option). Other plugins' fields pass through as given.
     public func addItem(_ productID: Int, quantity: Double,
                         options: [String: Any]? = nil) async throws -> CoCartResponse {
         try validateProductID(productID)
@@ -208,12 +215,14 @@ public final class CartResource {
         return try await http.batch(requests)
     }
 
+    /// Restore a removed item to the cart (`PUT cart/item/{item_key}`).
     public func restoreItem(_ itemKey: String) async throws -> CoCartResponse {
-        try await http.post("cart/item/\(itemKey)/restore")
+        try await http.put("cart/item/\(itemKey)")
     }
 
+    /// Items removed from the cart that can be restored.
     public func getRemovedItems() async throws -> CoCartResponse {
-        try await http.get("cart/items/removed")
+        try await getFiltered(["removed_items"])
     }
 
     public func clear() async throws -> CoCartResponse { try await http.post("cart/clear") }
@@ -225,6 +234,33 @@ public final class CartResource {
 
     public func update(_ data: [String: Any]) async throws -> CoCartResponse {
         try await http.post("cart/update", body: data)
+    }
+
+    /// Switch a cart item to another subscription plan, or to one-time with `"0"`
+    /// (CoCart Plus).
+    ///
+    /// The options are in the item's `extensions.subscription_schemes`; pass one's
+    /// `value`. Posts the `update-item-schema` callback on `POST cart/update`.
+    public func changePlan(_ itemKey: String, value: String) async throws -> CoCartResponse {
+        guard !itemKey.isEmpty else {
+            throw CoCartError.validation("changePlan() requires an item key.")
+        }
+        return try await update([
+            "namespace": "update-item-schema",
+            "item_key": itemKey,
+            "convert_to_sub": value
+        ])
+    }
+
+    /// A lighter cart response for a mini cart (CoCart Plus).
+    public func getMini(_ params: [String: String]? = nil) async throws -> CoCartResponse {
+        try await http.get("cart/mini", queryParams: params)
+    }
+
+    /// Remove every item but keep the cart's coupons, fees and customer details
+    /// (CoCart Plus, `DELETE cart/items`). `clear()` empties the whole cart.
+    public func removeAllItems() async throws -> CoCartResponse {
+        try await http.delete("cart/items")
     }
 
     public func getTotals(formatted: Bool = false) async throws -> CoCartResponse {
@@ -245,20 +281,39 @@ public final class CartResource {
 
     // MARK: - CoCart Plus
 
-    public func applyCoupon(_ code: String) async throws -> CoCartResponse {
-        try await http.post("cart/coupon", body: ["coupon": code])
+    /// Apply a coupon (CoCart Plus). Pass the customer's `email` for coupons restricted
+    /// to certain emails when the cart doesn't know it yet.
+    public func applyCoupon(_ code: String, email: String? = nil) async throws -> CoCartResponse {
+        var body: [String: Any] = ["code": code]
+        if let email, !email.isEmpty { body["email"] = email }
+        return try await http.post("cart/apply-coupon", body: body)
     }
 
+    /// Remove a coupon (CoCart Plus).
+    ///
+    /// The code goes in the URL path, so it's encoded: codes can contain spaces, `%`,
+    /// `#`, `?` and other characters. A code containing `/` can't be removed by code
+    /// (CoCart Plus matches any path segment without `/`); `removeCoupons()` removes all
+    /// of them instead.
     public func removeCoupon(_ code: String) async throws -> CoCartResponse {
-        try await http.delete("cart/coupon/\(code)")
+        try await http.delete("cart/coupons/\(encodePathSegment(code))")
     }
 
+    /// Remove every coupon from the cart (CoCart Plus).
+    public func removeCoupons() async throws -> CoCartResponse {
+        try await http.delete("cart/coupons")
+    }
+
+    /// The coupons applied to the cart.
     public func getCoupons() async throws -> CoCartResponse {
-        try await http.get("cart/coupons")
+        try await getFiltered(["coupons"])
     }
 
-    public func checkCoupons() async throws -> CoCartResponse {
-        try await http.get("cart/check-coupons")
+    /// Check the applied coupons are still valid (CoCart Plus). Pass the customer's
+    /// `email` to check coupons restricted to certain emails.
+    public func checkCoupons(email: String? = nil) async throws -> CoCartResponse {
+        let params = email.flatMap { $0.isEmpty ? nil : ["email": $0] }
+        return try await http.get("cart/coupons/validate", queryParams: params)
     }
 
     /// Update customer billing (and optionally shipping) address on the cart.
@@ -291,12 +346,16 @@ public final class CartResource {
         return try await http.post("cart/update", body: body)
     }
 
+    /// The customer's details on the cart.
     public func getCustomer() async throws -> CoCartResponse {
-        try await http.get("cart/customer")
+        try await getFiltered(["customer"])
     }
 
+    /// The cart's shipping packages and their rates. Read them with
+    /// `CoCartResponse.getShippingMethods()` (a list of packages) or
+    /// `CoCartResponse.getShipping()` (the whole field).
     public func getShippingMethods() async throws -> CoCartResponse {
-        try await http.get("cart/shipping-methods")
+        try await getFiltered(["shipping"])
     }
 
     /// There is no address-taking shipping-calculation endpoint in the CoCart
@@ -324,24 +383,35 @@ public final class CartResource {
         return try await http.post("cart/set-shipping-method", body: body)
     }
 
+    /// The cart's fees. Read them as a list with `CoCartResponse.getFees()`.
     public func getFees() async throws -> CoCartResponse {
-        try await http.get("cart/fees")
+        try await getFiltered(["fees"])
     }
 
-    public func addFee(_ name: String, amount: Double,
-                       taxable: Bool = false) async throws -> CoCartResponse {
-        try await http.post("cart/fees", body: [
-            "name": name,
-            "amount": "\(amount)",
-            "taxable": "\(taxable)"
-        ])
+    /// Add a fee to the cart (CoCart Plus).
+    ///
+    /// - Parameter taxClass: The tax class to use when the fee is taxable.
+    public func addFee(_ name: String, amount: Double, taxable: Bool = false,
+                       taxClass: String? = nil) async throws -> CoCartResponse {
+        // CoCart Plus takes the amount as a string (a number is rejected as rest_invalid_param).
+        var body: [String: Any] = ["name": name, "amount": "\(amount)", "taxable": taxable]
+        if let taxClass, !taxClass.isEmpty { body["tax_class"] = taxClass }
+        return try await http.post("cart/add-fee", body: body)
     }
 
+    /// Remove all fees from the cart (CoCart Plus).
     public func removeFees() async throws -> CoCartResponse {
-        try await http.delete("cart/fees")
+        try await http.post("cart/remove-fees")
     }
 
+    /// Cross-sell products for the items in the cart.
     public func getCrossSells() async throws -> CoCartResponse {
-        try await http.get("cart/cross-sells")
+        try await getFiltered(["cross_sells"])
+    }
+
+    private func encodePathSegment(_ value: String) -> String {
+        var allowed = CharacterSet.urlPathAllowed
+        allowed.remove(charactersIn: "/?#%")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
 }

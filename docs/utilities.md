@@ -74,8 +74,12 @@ The SDK provides an event system for monitoring the request/response lifecycle. 
 | Event | Payload | When |
 |-------|---------|------|
 | `.request` | `method`, `url` | Before every HTTP request |
-| `.response` | `status`, `duration` | After every successful HTTP response |
-| `.error` | `error` | When a request fails |
+| `.response` | `method`, `url`, `status`, `duration`, `response` (the `CoCartResponse`) | After every HTTP response, including an error's |
+| `.error` | `method`, `url`, `error` | When a request fails |
+
+Every request emits these events, the CoCart Plus ones (checkout, account) included.
+
+**The `url` is the full URL, query string included.** It can carry the cart key, an order key, an email address or a verification key, so a listener must not forward it (to analytics, a crash reporter or a log service). Send the path only, if anything. The SDK's own debug output (`setDebug(true)`) shows every query value as `***`.
 
 ### Subscribing to Events
 

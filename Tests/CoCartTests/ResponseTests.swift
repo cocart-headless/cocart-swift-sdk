@@ -55,7 +55,7 @@ final class ResponseTests: XCTestCase {
     }
 
     func testGetItemCount() {
-        let response = CoCartResponse(data: ["items_count": 3], headers: [:], statusCode: 200)
+        let response = CoCartResponse(data: ["item_count": 3], headers: [:], statusCode: 200)
         XCTAssertEqual(response.getItemCount(), 3)
     }
 

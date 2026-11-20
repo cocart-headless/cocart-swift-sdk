@@ -34,16 +34,16 @@ let response = try await client.sessions().all(["per_page": "50"])
 let response = try await client.sessions().get("guest_abc123")
 ```
 
+### Get a Session's Items
+
+```swift
+let response = try await client.sessions().getItems("guest_abc123")
+```
+
 ### Delete a Session
 
 ```swift
 let response = try await client.sessions().delete("guest_abc123")
-```
-
-### Delete All Sessions
-
-```swift
-let response = try await client.sessions().deleteAll()
 ```
 
 ---
