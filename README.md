@@ -15,8 +15,8 @@ Official Swift SDK for the [CoCart](https://cocartapi.com) REST API — a native
 
 * [ ] Add SDK docs to documentation site
 * [ ] Add support for Cart API extras
-* [ ] Add Checkout API support
-* [x] Add Customers Account API support — implemented in the SDK ([`client.account()`](docs/account.md)), but the Account API itself is not yet available in a released version of the CoCart plugin. This SDK support is ready for when it ships.
+* [x] Add Checkout API support — implemented ([`client.checkout()`](docs/checkout.md)); needs CoCart Plus 2.0, which isn't released yet
+* [x] Add Customers Account API support — implemented ([`client.account()`](docs/account.md)); needs CoCart Plus 2.0, which isn't released yet
 
 ---
 
@@ -25,6 +25,7 @@ Official Swift SDK for the [CoCart](https://cocartapi.com) REST API — a native
 - **Swift 5.10+** — Required for `async/await` and modern concurrency features. Xcode 15.4 or later includes this version.
 - **iOS 17+, macOS 14+, or watchOS 10+** — The minimum deployment targets for the SDK.
 - **CoCart plugin** installed on your WooCommerce store — This is the WordPress plugin that provides the REST API endpoints the SDK communicates with.
+- **CoCart Plus 2.0** for the account and checkout APIs (not released yet) — The add-on plugin that provides customer accounts, checkout and payment. The cart and product APIs don't need it.
 - [CoCart JWT Authentication](https://wordpress.org/plugins/cocart-jwt-authentication/) plugin for JWT features (optional) — Only needed if you want to use JSON Web Token authentication (explained in the [Authentication](docs/authentication.md) guide).
 
 ## Support Policy
@@ -144,8 +145,8 @@ do {
 | [Cart API](docs/cart.md) | Add, update, remove items, coupons, shipping, fees |
 | [Products API](docs/products.md) | List, filter, search, sort, variations, categories, tags, attributes, brands, reviews, shipping rates, SEO |
 | [Sessions API](docs/sessions.md) | Admin sessions, storage adapters, guest session lifecycle |
-| [Account API](docs/account.md) | Registration, customer profile, password, address, order history, downloads, reviews and subscriptions (supported by the SDK, not yet released in the CoCart plugin) |
-| [Checkout](docs/checkout.md) | Place orders and take payment (`CheckoutResult`), 3D Secure, wallets and vouchers, off-site steps, saved payment methods, the thank-you page, paying for unpaid orders, `getStatus()` when the outcome isn't known (CoCart Plus 2.0) |
+| [Account API](docs/account.md) | Registration, customer profile, password, address, order history, downloads, reviews and subscriptions (needs CoCart Plus 2.0, not released yet) |
+| [Checkout](docs/checkout.md) | Place orders and take payment (`CheckoutResult`), 3D Secure, wallets and vouchers, off-site steps, saved payment methods, the thank-you page, paying for unpaid orders, `getStatus()` when the outcome isn't known (needs CoCart Plus 2.0, not released yet) |
 | [Error Handling](docs/error-handling.md) | Error types, catching errors, common scenarios, expired carts, rate limits |
 | [Extension Data](docs/extension-data.md) | Plugin data under `extensions` (CoCart Plus integrations), and sending a plan, gift or warranty choice |
 | [Utilities](docs/utilities.md) | Currency formatter, event system, secure session storage |
