@@ -16,8 +16,8 @@ public final class CheckoutResource {
     }
 
     /// The checkout as it stands, like a receipt: items, coupons, fees, `totals` and
-    /// `total_lines`, the payment method, the addresses, each shipping package with its rates,
-    /// and `actions`.
+    /// `total_lines`, the payment method, the addresses, and each shipping package with its
+    /// rates.
     ///
     /// Call it for the screen the customer reviews before paying: CoCart Plus remembers the
     /// total it showed, and refuses the order if the total has changed by then
@@ -146,8 +146,8 @@ public final class CheckoutResource {
         try await http.getRaw("\(Self.route)/config")
     }
 
-    /// The payment methods for this cart: `{"payment_methods": [...]}`, each with `id`,
-    /// `title`, `supports` and, for a logged-in customer, `saved_tokens`.
+    /// The payment methods for this cart, as a list (read it with `toArray()`), each with
+    /// `id`, `title`, `supports` and, for a logged-in customer, `saved_tokens`.
     public func getPaymentMethods() async throws -> CoCartResponse {
         try await http.getRaw("\(Self.route)/payment-methods")
     }
@@ -156,7 +156,7 @@ public final class CheckoutResource {
     /// `wc-{gatewayId}-payment-token` in `payment_data`, or change a subscription's card with
     /// its `id` as `token_id`. Empty for a guest.
     public func getSavedPaymentMethods(gateway: String? = nil) async throws -> [SavedPaymentMethod] {
-        let methods = try await getPaymentMethods().get("payment_methods") as? [Any] ?? []
+        let methods = try await getPaymentMethods().toArray()
         var saved: [SavedPaymentMethod] = []
         for case let method as [String: Any] in methods {
             guard let id = method["id"] as? String, gateway == nil || id == gateway else { continue }

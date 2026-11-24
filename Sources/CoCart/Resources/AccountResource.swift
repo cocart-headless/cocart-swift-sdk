@@ -65,8 +65,7 @@ public final class AccountResource {
 
     // MARK: - Profile
 
-    /// The signed-in customer (`object` `customer`): name, email, addresses, order stats and
-    /// `actions`.
+    /// The signed-in customer (`object` `customer`): name, email, addresses and order stats.
     ///
     /// - Parameters:
     ///   - formatted: Amounts formatted for display instead of minor units.
@@ -134,18 +133,19 @@ public final class AccountResource {
 
     // MARK: - Downloads
 
-    /// The files one of the customer's orders can download: `{"downloads": [...]}`.
+    /// The files one of the customer's orders can download, as a list (read it with
+    /// `toArray()`).
     public func getOrderDownloads(_ id: Int) async throws -> CoCartResponse {
         try await getRaw("orders/\(id)/downloads")
     }
 
-    /// The files a guest's order can download, looked up with its billing email:
-    /// `{"downloads": [...]}`.
+    /// The files a guest's order can download, looked up with its billing email, as a list
+    /// (read it with `toArray()`).
     public func getGuestOrderDownloads(_ id: Int, email: String) async throws -> CoCartResponse {
         try await getRaw("orders/\(id)/downloads", query: ["email": email])
     }
 
-    /// Every file the customer can download: `{"downloads": [...]}`.
+    /// Every file the customer can download, as a list (read it with `toArray()`).
     public func getDownloads() async throws -> CoCartResponse {
         try await getRaw("downloads")
     }

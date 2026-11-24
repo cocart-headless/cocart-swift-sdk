@@ -267,7 +267,7 @@ final class HTTPClient {
             }
 
             // Some routes answer with a list (categories, tags, attributes, reviews,
-            // variations): keep it as well as an object body.
+            // variations, payment methods, downloads): keep it as well as an object body.
             let root = data.isEmpty ? nil : try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
             let body = root as? [String: Any] ?? [:]
             let list = root as? [Any]

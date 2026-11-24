@@ -204,26 +204,28 @@ final class AccountResourceTests: XCTestCase {
         var capturedRequest: URLRequest?
         MockURLProtocol.requestHandler = { req in
             capturedRequest = req
-            return try self.jsonResponse(req, body: ["downloads": [["download_id": "abc"]]])
+            return try self.jsonResponse(req, body: [["id": "abc", "name": "Guide"]])
         }
 
         let response = try await makeResource().getOrderDownloads(3)
 
-        // The response as sent: `{"downloads": [...]}`.
+        // The route answers with the list of downloads itself.
         XCTAssertEqual(capturedRequest?.url?.path, "/wp-json/cocart/v2/my-account/orders/3/downloads")
         XCTAssertNil(capturedRequest?.url?.query)
-        XCTAssertEqual((response.get("downloads") as? [[String: Any]])?.first?["download_id"] as? String, "abc")
+        XCTAssertEqual(response.toArray().count, 1)
+        XCTAssertEqual(response.getString("0.id"), "abc")
     }
 
     func testGetGuestOrderDownloadsSendsTheBillingEmailToTheSameRoute() async throws {
         var capturedRequest: URLRequest?
         MockURLProtocol.requestHandler = { req in
             capturedRequest = req
-            return try self.jsonResponse(req, body: ["downloads": [] as [Any]])
+            return try self.jsonResponse(req, body: [] as [Any])
         }
 
-        _ = try await makeResource().getGuestOrderDownloads(3, email: "jane@example.com")
+        let response = try await makeResource().getGuestOrderDownloads(3, email: "jane@example.com")
 
+        XCTAssertTrue(response.toArray().isEmpty)
         XCTAssertEqual(capturedRequest?.url?.path, "/wp-json/cocart/v2/my-account/orders/3/downloads")
         XCTAssertEqual(query(capturedRequest), ["email": "jane@example.com"])
     }

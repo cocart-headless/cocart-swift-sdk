@@ -14,7 +14,7 @@ let client = CoCart("https://your-store.com")
     .setJWTToken("eyJ...")
 ```
 
-The customer, an order and a subscription come back as documents (CoCart Plus 2.0): each has `object` (`customer`, `order`, `subscription`), the record's fields, and `actions` (what the customer can do next, e.g. cancel or pay). A request that changes something also sends `result`, with `code` and a `message` for the customer: `account_updated`, `account_created`, and so on.
+The customer, an order and a subscription come back as documents (CoCart Plus 2.0): each has `object` (`customer`, `order`, `subscription`), and the record's fields; an order or subscription also has `allowed_actions` (the names of what the customer may do with it now, e.g. `pay` or `cancel`). A request that changes something also sends `result`, with `code` and a `message` for the customer: `account_updated`, `account_created`, and so on.
 
 The methods that read a document take `formatted: true` (amounts formatted for display, `"$18.00"`, instead of minor units, `"1800"`) and `metaKeys` (only these keys in its `meta`): `getProfile()`, `getOrder(_:)`, `getGuestOrder(_:email:)` and `getSubscription(_:)`. The list methods (`getOrders(_:)`, `getSubscriptions(_:)`) take them in their parameters as `formatted` and `meta_keys`.
 
@@ -150,7 +150,7 @@ response.getString("status.code") // "cancelled"
 
 ### Get Downloads for an Order
 
-`GET my-account/orders/{id}/downloads`. It returns the response as sent, `{"downloads": [...]}`, like `getDownloads()`:
+`GET my-account/orders/{id}/downloads`. It returns the list of downloads, like `getDownloads()`: read it with `toArray()`.
 
 ```swift
 let response = try await client.account().getOrderDownloads(123)
@@ -158,7 +158,7 @@ let response = try await client.account().getOrderDownloads(123)
 // For a guest order, looked up with its billing email
 let guest = try await client.account().getGuestOrderDownloads(123, email: "jane@example.com")
 
-for download in response.get("downloads") as? [[String: Any]] ?? [] {
+for case let download as [String: Any] in response.toArray() {
     print(download)
 }
 ```
@@ -166,7 +166,7 @@ for download in response.get("downloads") as? [[String: Any]] ?? [] {
 ### Get All Downloads
 
 ```swift
-let response = try await client.account().getDownloads() // {"downloads": [...]}
+let response = try await client.account().getDownloads() // the list of downloads: response.toArray()
 ```
 
 ### Get Reviews

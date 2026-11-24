@@ -165,8 +165,8 @@ config.getString("store.privacy_url")
 The payment methods for this cart, as a list:
 
 ```swift
-let methods = try await client.checkout().getPaymentMethods().get("payment_methods") as? [[String: Any]] ?? []
-for method in methods { /* method["id"], method["title"], method["supports"] */ }
+let methods = try await client.checkout().getPaymentMethods().toArray()
+for case let method as [String: Any] in methods { /* method["id"], method["title"], method["supports"] */ }
 ```
 
 Shipping methods work as in the [cart](cart.md).

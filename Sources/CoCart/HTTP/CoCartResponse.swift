@@ -197,7 +197,7 @@ public struct CoCartResponse {
     }
 
     /// The body as an array, for routes that answer with one (categories, tags,
-    /// attributes, reviews, variations); empty otherwise.
+    /// attributes, reviews, variations, payment methods, downloads); empty otherwise.
     public func toArray() -> [Any] { list ?? [] }
 
     // MARK: - Codable decoding
